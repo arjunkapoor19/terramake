@@ -1,0 +1,11 @@
+{
+  "s3": {
+    "bucket_name": "my-bucket",
+    "public": false,
+    "versioning": true
+  },
+  "cloudfront": {
+    "enabled": true,
+    "origin": "my-bucket"
+  }
+}
