@@ -4,6 +4,8 @@ from rich import print
 from src.generator.main_generator import generate_all
 from src.ai.validator import review_terraform
 from src.ai.validator import suggest_fixes
+from src.utils.logger import log_feedback
+from src.utils.analyzer import analyze_feedback
 
 app = typer.Typer()
 
@@ -99,12 +101,119 @@ def suggest(input_file: str):
 
     suggestions = suggest_fixes(tf_code)
 
+    print("\n[bold blue]AI Suggestions[/bold blue]\n")
+
+    suggestions_list = []
+    current = []
+
     for line in suggestions.split("\n"):
-        if "[FIXES]" in line:
-            print("[bold green]FIXES[/bold green]")
-        elif line.strip().startswith("- Problem"):
-            print(f"\n[bold yellow]{line}[/bold yellow]")
-        elif "Fix:" in line:
-            print("[bold cyan]Fix:[/bold cyan]")
-        else:
-            print(f"[white]{line}[/white]")
+        if line.strip().startswith("- Problem"):
+            if current:
+                suggestions_list.append("\n".join(current))
+                current = []
+        current.append(line)
+
+    if current:
+        suggestions_list.append("\n".join(current))
+
+    # Print with numbering
+    for i, s in enumerate(suggestions_list):
+        print(f"\n[bold green]Fix #{i}[/bold green]")
+        print(s)
+
+@app.command()
+def feedback(input_file: str, index: int, action: str):
+    """
+    Log feedback on a specific suggestion (accept/reject)
+    """
+
+    config = load_config(input_file)
+
+    tf_code = generate_all(config)
+    suggestions = suggest_fixes(tf_code)
+
+    # Split suggestions
+    suggestions_list = []
+    current = []
+
+    for line in suggestions.split("\n"):
+        if line.strip().startswith("- Problem"):
+            if current:
+                suggestions_list.append("\n".join(current))
+                current = []
+        current.append(line)
+
+    if current:
+        suggestions_list.append("\n".join(current))
+
+    # Validate index
+    if index < 0 or index >= len(suggestions_list):
+        print("[red]Invalid suggestion index[/red]")
+        raise typer.Exit()
+    
+    if action not in ["accept", "reject"]:
+        print("[red]Action must be 'accept' or 'reject'[/red]")
+        raise typer.Exit()
+
+    selected_suggestion = suggestions_list[index]
+
+    # Log only selected suggestion
+    log_feedback(config, tf_code, selected_suggestion, action)
+
+    print(f"[green]Feedback '{action}' logged for Fix #{index}[/green]")
+
+
+@app.command()
+def feedback_all(input_file: str, action: str):
+    """
+    Log feedback for ALL suggestions (accept/reject)
+    """
+
+    if action not in ["accept", "reject"]:
+        print("[red]❌ Action must be 'accept' or 'reject'[/red]")
+        raise typer.Exit()
+
+    config = load_config(input_file)
+
+    tf_code = generate_all(config)
+    suggestions = suggest_fixes(tf_code)
+
+    # Split suggestions into list
+    suggestions_list = []
+    current = []
+
+    for line in suggestions.split("\n"):
+        if line.strip().startswith("- Problem"):
+            if current:
+                suggestions_list.append("\n".join(current))
+                current = []
+        current.append(line)
+
+    if current:
+        suggestions_list.append("\n".join(current))
+
+    # Log each suggestion
+    for i, s in enumerate(suggestions_list):
+        log_feedback(config, tf_code, s, action)
+
+    print(f"[green]'{action}' logged for ALL ({len(suggestions_list)}) suggestions[/green]")
+
+
+@app.command()
+def stats():
+    """
+    Show feedback statistics
+    """
+
+    stats = analyze_feedback()
+
+    if isinstance(stats, str):
+        print(f"[yellow]{stats}[/yellow]")
+        return
+
+    print("\n[bold blue]Feedback Stats[/bold blue]\n")
+
+    print(f"[green]Total:[/green] {stats['total']}")
+    print(f"[green]Accepted:[/green] {stats['accepted']}")
+    print(f"[red]Rejected:[/red] {stats['rejected']}")
+    print(f"[bold]Acceptance Rate:[/bold] {stats['acceptance_rate']}%")

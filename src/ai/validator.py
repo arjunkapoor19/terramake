@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from groq import Groq
+from src.utils.analyzer import get_rejected_patterns
 
 load_dotenv()
 
@@ -50,9 +51,14 @@ Terraform:
     except Exception as e:
         return f"Groq API Error: {str(e)}"
     
+rejected_patterns = get_rejected_patterns()
+    
 def suggest_fixes(tf_code: str) -> str:
     prompt = f"""
 You are a senior DevOps engineer.
+
+Avoid making these mistakes:
+{rejected_patterns[:3]}
 
 Given Terraform code, suggest FIXES.
 
