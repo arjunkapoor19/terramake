@@ -6,6 +6,7 @@ from src.ai.validator import review_terraform
 from src.ai.validator import suggest_fixes
 from src.utils.logger import log_feedback
 from src.utils.analyzer import analyze_feedback
+from src.utils.analyzer import get_rejected_patterns, extract_patterns
 
 app = typer.Typer()
 
@@ -217,3 +218,13 @@ def stats():
     print(f"[green]Accepted:[/green] {stats['accepted']}")
     print(f"[red]Rejected:[/red] {stats['rejected']}")
     print(f"[bold]Acceptance Rate:[/bold] {stats['acceptance_rate']}%")
+
+@app.command()
+def patterns():
+    raw = get_rejected_patterns()
+    patterns = extract_patterns(raw)
+
+    print("\n[bold blue]Learned Patterns[/bold blue]\n")
+
+    for p in patterns:
+        print(f"- {p}")

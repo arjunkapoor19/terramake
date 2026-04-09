@@ -36,3 +36,21 @@ def get_rejected_patterns():
     rejected = [d["suggestions"] for d in data if d["action"] == "reject"]
 
     return rejected
+
+def extract_patterns(rejected_list):
+    patterns = []
+
+    for r in rejected_list:
+        r_lower = r.lower()
+
+        if "public" in r_lower and "s3" in r_lower:
+            patterns.append("Avoid making S3 buckets public")
+
+        elif "policy" in r_lower and "principal" in r_lower:
+            patterns.append("Avoid overly permissive bucket policies")
+
+        elif "rewrite entire" in r_lower:
+            patterns.append("Do not rewrite full resources")
+
+    return list(set(patterns))
+
