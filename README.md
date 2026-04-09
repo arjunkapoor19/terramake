@@ -89,7 +89,7 @@ Feedback Logger ──▶ Analyzer ──▶ Adaptive Prompt System
 ## Installation
 
 ```bash
-git clone <your-repo-url>
+git clone <https://github.com/arjunkapoor19/terramake.git>
 cd terramake
 pip install -r requirements.txt
 ```
