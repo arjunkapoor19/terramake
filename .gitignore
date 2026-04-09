@@ -1,1 +1,4 @@
 .env
+faulty.json
+__pycache__/
+outputs/*.tf

@@ -15,13 +15,28 @@ app = typer.Typer()
 def load_config(input_file: str):
     try:
         with open(input_file) as f:
-            config = json.load(f)
+            content = f.read().strip()
+
+            if not content:
+                print("[red]Input file is empty[/red]")
+                print("[yellow]Add valid JSON configuration to the file.[/yellow]")
+                raise typer.Exit()
+
+            config = json.loads(content)
+
     except FileNotFoundError:
         print("[red]File not found[/red]")
+        print("[yellow]Make sure the path is correct[/yellow]")
+        raise typer.Exit()
+
+    except json.JSONDecodeError:
+        print("[red]Invalid JSON format[/red]")
+        print("[yellow]Check for syntax errors in your JSON file[/yellow]")
         raise typer.Exit()
 
     if "s3" not in config and "cloudfront" not in config:
         print("[red]Invalid input: No supported resources found[/red]")
+        print("[yellow]Expected keys: 's3' or 'cloudfront', make sure either is present.[/yellow]")
         raise typer.Exit()
 
     return config
@@ -221,6 +236,10 @@ def stats():
 
 @app.command()
 def patterns():
+    """
+    Print learned patterns
+    """
+
     raw = get_rejected_patterns()
     patterns = extract_patterns(raw)
 
@@ -228,3 +247,40 @@ def patterns():
 
     for p in patterns:
         print(f"- {p}")
+
+
+@app.command()
+def demo(input_file: str):
+    """
+    Run full TerraMake pipeline (generate → review → suggest → stats)
+    """
+
+    config = load_config(input_file)
+    
+    print("\n[bold cyan]TerraMake Demo[/bold cyan]\n")
+
+    # Generate
+    print("[bold blue]Generating Terraform...[/bold blue]")
+    tf_code = generate_all(config)
+
+    print("\n[green]Terraform Generated[/green]\n")
+
+    # Review
+    print("[bold blue]Reviewing Terraform...[/bold blue]\n")
+    review_output = review_terraform(tf_code)
+    print(review_output)
+
+    # Suggest
+    print("\n[bold blue]Suggesting Improvements...[/bold blue]\n")
+    suggestions = suggest_fixes(tf_code)
+    print(suggestions)
+
+    # Stats
+    print("\n[bold blue]Feedback Stats[/bold blue]\n")
+    stats = analyze_feedback()
+
+    if isinstance(stats, dict):
+        print(f"Total: {stats['total']}")
+        print(f"Accepted: {stats['accepted']}")
+        print(f"Rejected: {stats['rejected']}")
+        print(f"Acceptance Rate: {stats['acceptance_rate']}%")
